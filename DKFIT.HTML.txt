@@ -1,0 +1,617 @@
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import {
+  Dumbbell,
+  Activity,
+  CheckCircle2,
+  MapPin,
+  Phone,
+  Menu,
+  X,
+  Clock,
+  ChevronRight,
+  Star,
+  Target,
+  TrendingUp,
+  Flame,
+  Users,
+  Calendar,
+  Heart,
+  Quote,
+  Trophy,
+  Sparkles,
+  ArrowRight,
+  ArrowLeft
+} from "lucide-react";
+
+// --- CONFIGURAÇÃO ---
+const CONFIG = {
+  whatsapp: {
+    number: "553139651741",
+    message: "Olá! Vi o novo site e gostaria de agendar uma avaliação na DK FIT.",
+  },
+};
+
+const whatsappLink = `https://wa.me/${CONFIG.whatsapp.number}?text=${encodeURIComponent(
+  CONFIG.whatsapp.message
+)}`;
+
+// --- DADOS ESTÁTICOS ---
+const STATS = [
+  { label: "Alunos Ativos", value: "300+", icon: Users },
+  { label: "Anos de História", value: "2+", icon: Calendar },
+  { label: "Satisfação", value: "98%", icon: Heart },
+  { label: "Transformações", value: "500+", icon: Trophy },
+];
+
+// --- HISTÓRIA ATUALIZADA (2023) ---
+const HISTORY = [
+  { year: "2023", title: "O Início", desc: "Fundação da DK FIT com o propósito de trazer uma metodologia moderna e humanizada para Santo André." },
+  { year: "2024", title: "Crescimento", desc: "Reconhecimento rápido pela qualidade técnica e ampliação da grade de modalidades." },
+  { year: "2025", title: "A Referência", desc: "Consolidação como a principal escolha para quem busca resultados reais e ambiente exclusivo." },
+  { year: "2026", title: "O Futuro", desc: "Expansão da estrutura e implementação de novas tecnologias de monitoramento de treino." },
+];
+
+const TESTIMONIALS = [
+  {
+    name: "Carlos Eduardo",
+    role: "Aluno há 1 ano",
+    text: "Já treinei em várias academias de rede, mas só na DK encontrei atenção de verdade. Perdi 15kg em 6 meses com o suporte deles.",
+    stars: 5,
+  },
+  {
+    name: "Fernanda Lima",
+    role: "Aluna de Pilates",
+    text: "Minha postura melhorou 100%. Os professores são extremamente técnicos e o ambiente é super acolhedor. Recomendo demais!",
+    stars: 5,
+  },
+  {
+    name: "Ricardo Alves",
+    role: "Aluno há 8 meses",
+    text: "Estrutura impecável e horário flexível. O melhor investimento que fiz para minha saúde este ano.",
+    stars: 5,
+  },
+];
+
+const BENEFITS = [
+  {
+    title: "Objetivos Claros",
+    desc: "Definição precisa de metas baseada na sua biotipologia.",
+    icon: Target,
+  },
+  {
+    title: "Evolução Constante",
+    desc: "Monitoramento periódico para garantir que você não estagne.",
+    icon: TrendingUp,
+  },
+  {
+    title: "Bem-estar Mental",
+    desc: "Ambiente livre de julgamentos, focado no seu progresso.",
+    icon: Sparkles,
+  },
+  {
+    title: "Resultados Reais",
+    desc: "Sem promessas milagrosas, apenas ciência e suor.",
+    icon: Dumbbell,
+  },
+];
+
+const App = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [logoError, setLogoError] = useState(false);
+  
+  // Estados para animação da Timeline
+  const [lineHeight, setLineHeight] = useState(0);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const [visibleItems, setVisibleItems] = useState<number[]>([]);
+
+  // Scroll Listener Geral & Lógica da Timeline
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          // Navbar Logic
+          setIsScrolled(window.scrollY > 40);
+
+          // Timeline Logic
+          if (timelineRef.current) {
+            const rect = timelineRef.current.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            const startOffset = windowHeight * 0.7; // Começa a encher quando topo da seção está a 70% da tela
+            
+            // Calcula progresso relativo à rolagem
+            // Quando rect.top === startOffset -> 0%
+            // Quando rect.bottom === startOffset -> 100%
+            
+            const totalDistance = rect.height;
+            const scrolledDistance = startOffset - rect.top;
+            
+            let percentage = (scrolledDistance / totalDistance) * 100;
+            percentage = Math.max(0, Math.min(100, percentage));
+            
+            setLineHeight(percentage);
+
+            // Revelar itens baseado na porcentagem
+            const newVisibleItems = [];
+            HISTORY.forEach((_, index) => {
+                // Item appears when line passes its relative position (roughly)
+                const triggerPoint = (index / (HISTORY.length - 1)) * 100; // 0, 33, 66, 100 roughly
+                if (percentage >= triggerPoint - 10) { // -10 de "folga" para aparecer um pouco antes
+                    newVisibleItems.push(index);
+                }
+            });
+            // Apenas adiciona novos visíveis, não remove (para não "sumir" ao voltar scroll rápido)
+            setVisibleItems(prev => Array.from(new Set([...prev, ...newVisibleItems])));
+          }
+
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Check on mount
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Auto-play Carrossel de Depoimentos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTestimonial((prev) => (prev + 1) % TESTIMONIALS.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const scrollToSection = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    setIsMobileMenuOpen(false);
+  };
+
+  const nextTestimonial = () => setActiveTestimonial((prev) => (prev + 1) % TESTIMONIALS.length);
+  const prevTestimonial = () => setActiveTestimonial((prev) => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
+
+  const Logo = useMemo(
+    () =>
+      logoError ? (
+        <span className="flex items-center gap-1 font-black tracking-tighter text-3xl select-none cursor-pointer">
+          <span className="text-white">DK</span>
+          <span className="text-yellow-500">FIT</span>
+        </span>
+      ) : (
+        <img
+          src="image_c83533.png"
+          alt="DK FIT"
+          className="h-12 w-auto cursor-pointer"
+          onError={() => setLogoError(true)}
+        />
+      ),
+    [logoError]
+  );
+
+  return (
+    <div className="bg-zinc-950 text-gray-100 font-sans selection:bg-yellow-500 selection:text-black min-h-screen flex flex-col overflow-x-hidden">
+      
+      {/* --- NAV --- */}
+      <nav
+        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+          isScrolled
+            ? "bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 py-3 shadow-2xl"
+            : "bg-transparent py-5"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          <div onClick={() => scrollToSection("home")}>{Logo}</div>
+
+          <div className="hidden lg:flex items-center gap-8 text-xs uppercase font-bold tracking-widest">
+            {["sobre", "historia", "modalidades", "depoimentos", "localizacao"].map((id) => (
+              <button
+                key={id}
+                onClick={() => scrollToSection(id)}
+                className="hover:text-yellow-500 transition-colors relative group"
+              >
+                {id}
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-500 transition-all group-hover:w-full"></span>
+              </button>
+            ))}
+            <a
+              href={whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-yellow-500 text-black px-6 py-3 font-bold rounded-sm hover:bg-yellow-400 transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+            >
+              Avaliação Grátis
+            </a>
+          </div>
+
+          <button
+            className="lg:hidden text-white"
+            aria-label="Abrir menu"
+            onClick={() => setIsMobileMenuOpen((v) => !v)}
+          >
+            {isMobileMenuOpen ? <X size={30} /> : <Menu size={30} />}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        <div className={`lg:hidden fixed inset-0 bg-zinc-950 z-40 transform transition-transform duration-300 pt-24 px-6 ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+            <div className="flex flex-col gap-6 text-center">
+                {["sobre", "historia", "modalidades", "depoimentos", "localizacao"].map((id) => (
+                <button
+                    key={id}
+                    onClick={() => scrollToSection(id)}
+                    className="text-2xl font-black uppercase hover:text-yellow-500 transition-colors"
+                >
+                    {id}
+                </button>
+                ))}
+                 <a
+                    href={whatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-yellow-500 text-black py-4 text-center font-bold rounded-sm mt-4 text-xl"
+                >
+                    Agendar Agora
+                </a>
+            </div>
+        </div>
+      </nav>
+
+      {/* --- HERO --- */}
+      <section id="home" className="min-h-screen flex items-center relative overflow-hidden">
+        <div className="absolute inset-0 z-0">
+            <img
+            src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop"
+            className="w-full h-full object-cover scale-105 animate-pulse-slow" 
+            style={{ animationDuration: '20s' }} // Slow zoom/pan effect
+            alt="Academia Background"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/80 to-transparent" />
+        </div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-6 pt-20 w-full grid md:grid-cols-2">
+          <div className="space-y-8 animate-in fade-in slide-in-from-left-10 duration-1000">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-500 text-xs font-bold uppercase tracking-widest">
+                <Flame size={14} /> Referência no Bairro Santo André
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black uppercase leading-[0.9]">
+              Transforme <br/> seu <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">corpo</span>
+              <br /> sua mente
+            </h1>
+            <p className="max-w-md text-gray-300 text-lg leading-relaxed border-l-4 border-yellow-500 pl-4">
+              Academia premium focada em resultado real,
+              acompanhamento humano e evolução constante. Chega de ser apenas um número.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex justify-center items-center gap-2 bg-yellow-500 text-black px-8 py-4 font-bold rounded-sm hover:bg-yellow-400 hover:-translate-y-1 transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)]"
+                >
+                Quero minha avaliação <ChevronRight size={20} strokeWidth={3} />
+                </a>
+                <button 
+                    onClick={() => scrollToSection('sobre')}
+                    className="inline-flex justify-center items-center gap-2 px-8 py-4 font-bold rounded-sm border border-zinc-700 hover:border-white hover:bg-zinc-800 transition-all"
+                >
+                    Conhecer a DK
+                </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- STATS BAR --- */}
+      <section className="bg-yellow-500 text-black py-12 relative z-20 -mt-10 md:-mt-0">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+            {STATS.map((stat, i) => (
+                <div key={i} className="text-center group cursor-default">
+                    <div className="flex justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
+                        <stat.icon size={32} strokeWidth={1.5} />
+                    </div>
+                    <div className="text-3xl md:text-4xl font-black">{stat.value}</div>
+                    <div className="text-xs md:text-sm font-bold uppercase tracking-wider opacity-80">{stat.label}</div>
+                </div>
+            ))}
+        </div>
+      </section>
+
+      {/* --- SOBRE & BENEFÍCIOS --- */}
+      <section id="sobre" className="py-24 bg-zinc-950">
+        <div className="max-w-7xl mx-auto px-6">
+            <div className="grid md:grid-cols-2 gap-16 items-center mb-24">
+                <div className="relative">
+                    <div className="absolute -top-4 -left-4 w-24 h-24 border-t-4 border-l-4 border-yellow-500 rounded-tl-3xl z-10"></div>
+                    <div className="absolute -bottom-4 -right-4 w-24 h-24 border-b-4 border-r-4 border-yellow-500 rounded-br-3xl z-10"></div>
+                    <img
+                    src="https://images.unsplash.com/photo-1593079831268-3381b0db4a77?q=80&w=2070&auto=format&fit=crop"
+                    className="w-full h-[500px] object-cover rounded-sm grayscale hover:grayscale-0 transition-all duration-700"
+                    alt="Interior da academia"
+                    />
+                </div>
+                <div>
+                    <h2 className="text-yellow-500 uppercase font-bold mb-2 tracking-wider flex items-center gap-2">
+                        <Activity size={18} /> A Diferença DK
+                    </h2>
+                    <h3 className="text-4xl font-black uppercase mb-6 leading-tight text-white">
+                        Mais que treinar,<br/> <span className="text-zinc-500">evoluir.</span>
+                    </h3>
+                    <p className="text-gray-400 mb-8 text-lg leading-relaxed">
+                        Não somos apenas um galpão cheio de máquinas. Somos um centro de treinamento onde cada detalhe foi pensado para o seu sucesso. Do piso de alta absorção à iluminação focada, tudo aqui tem um propósito.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {BENEFITS.map((benefit, i) => (
+                            <div key={i} className="bg-zinc-900/50 p-4 border border-zinc-800 rounded-sm hover:border-yellow-500/50 transition-colors group">
+                                <benefit.icon className="text-yellow-500 mb-3 group-hover:scale-110 transition-transform" size={24} />
+                                <h4 className="font-bold text-white uppercase mb-1 text-sm">{benefit.title}</h4>
+                                <p className="text-xs text-gray-500">{benefit.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+      </section>
+
+      {/* --- HISTÓRIA (TIMELINE ANIMADA) --- */}
+      <section id="historia" className="py-24 bg-zinc-900 border-t border-zinc-800 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-yellow-500/5 via-zinc-900 to-zinc-900 pointer-events-none"></div>
+        <div className="max-w-4xl mx-auto px-6 relative z-10">
+            <div className="text-center mb-16">
+                 <h2 className="text-yellow-500 uppercase font-bold mb-2 tracking-wider">Nossa Trajetória</h2>
+                 <h3 className="text-3xl font-black uppercase text-white">De 2023 até hoje</h3>
+            </div>
+
+            <div className="relative" ref={timelineRef}>
+                {/* Linha Central Estática (Fundo) */}
+                <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-1 bg-zinc-800 md:-ml-[2px] rounded-full"></div>
+                
+                {/* Linha Central Dinâmica (Preenchimento Amarelo) */}
+                <div 
+                    className="absolute left-4 md:left-1/2 top-0 w-1 bg-yellow-500 md:-ml-[2px] rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(234,179,8,0.5)]"
+                    style={{ height: `${lineHeight}%` }}
+                ></div>
+
+                <div className="space-y-12 pb-12">
+                    {HISTORY.map((item, index) => {
+                        const isVisible = visibleItems.includes(index);
+                        return (
+                        <div 
+                            key={index} 
+                            className={`relative flex flex-col md:flex-row gap-8 md:gap-0 transition-all duration-700 transform
+                                ${index % 2 === 0 ? 'md:flex-row-reverse' : ''}
+                                ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-20 translate-y-10'}
+                            `}
+                        >
+                            {/* Ponto na linha */}
+                            <div className={`absolute left-4 md:left-1/2 w-5 h-5 rounded-full border-4 border-zinc-900 -translate-x-2 md:-translate-x-2.5 mt-1.5 z-10 transition-all duration-500 ${isVisible ? 'bg-yellow-500 scale-125 shadow-[0_0_15px_rgba(234,179,8,0.8)]' : 'bg-zinc-700'}`}></div>
+                            
+                            {/* Espaço Vazio */}
+                            <div className="flex-1 hidden md:block"></div>
+
+                            {/* Conteúdo */}
+                            <div className={`flex-1 pl-12 md:pl-0 ${index % 2 === 0 ? 'md:pr-16 md:text-right' : 'md:pl-16 md:text-left'}`}>
+                                <span className={`text-5xl font-black block mb-2 transition-colors duration-500 ${isVisible ? 'text-zinc-800' : 'text-zinc-900'}`}>{item.year}</span>
+                                <h4 className={`text-xl font-bold uppercase mb-2 transition-colors duration-500 ${isVisible ? 'text-white' : 'text-zinc-700'}`}>{item.title}</h4>
+                                <p className={`text-sm leading-relaxed transition-colors duration-500 ${isVisible ? 'text-gray-400' : 'text-zinc-800'}`}>{item.desc}</p>
+                            </div>
+                        </div>
+                    )})}
+                </div>
+            </div>
+        </div>
+      </section>
+
+      {/* --- MODALIDADES --- */}
+      <section id="modalidades" className="py-24 bg-zinc-950">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <h2 className="text-yellow-500 uppercase font-bold mb-2 tracking-wider">
+            O que oferecemos
+          </h2>
+          <h3 className="text-4xl font-black uppercase mb-16">
+            Especialidades
+          </h3>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {[
+              {
+                icon: Dumbbell,
+                title: "Musculação Premium",
+                text: "Área de pesos livres completa e máquinas com biomecânica avançada para hipertrofia segura.",
+              },
+              {
+                icon: Activity,
+                title: "Pilates Studio",
+                text: "Estúdio completo para reabilitação, flexibilidade e fortalecimento do core com fisioterapeutas.",
+              },
+            ].map((m) => (
+              <div
+                key={m.title}
+                className="group relative bg-zinc-900 border border-zinc-800 p-10 rounded-sm overflow-hidden hover:-translate-y-2 transition-transform duration-300"
+              >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <m.icon size={100} />
+                </div>
+                <div className="relative z-10">
+                    <div className="w-16 h-16 rounded-full bg-zinc-950 flex items-center justify-center mx-auto mb-6 border border-zinc-800 group-hover:border-yellow-500 transition-colors">
+                        <m.icon className="text-yellow-500" size={32} />
+                    </div>
+                    <h4 className="font-black text-2xl mb-4 uppercase text-white group-hover:text-yellow-500 transition-colors">
+                    {m.title}
+                    </h4>
+                    <p className="text-gray-400 leading-relaxed">{m.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* --- DEPOIMENTOS --- */}
+      <section id="depoimentos" className="py-24 bg-zinc-900 relative">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+            <Quote className="mx-auto text-yellow-500/20 mb-6" size={60} />
+            <h2 className="text-yellow-500 uppercase font-bold mb-12 tracking-wider">O que dizem sobre nós</h2>
+            
+            <div className="relative min-h-[250px] flex items-center justify-center">
+                {/* Navigation Buttons */}
+                <button onClick={prevTestimonial} className="absolute left-0 top-1/2 -translate-y-1/2 p-2 hover:text-yellow-500 transition-colors z-10 hidden md:block">
+                    <ArrowLeft size={32} />
+                </button>
+                <button onClick={nextTestimonial} className="absolute right-0 top-1/2 -translate-y-1/2 p-2 hover:text-yellow-500 transition-colors z-10 hidden md:block">
+                    <ArrowRight size={32} />
+                </button>
+
+                {/* Content */}
+                <div className="animate-in fade-in duration-500 px-8">
+                    <div className="flex justify-center gap-1 mb-6">
+                        {[...Array(TESTIMONIALS[activeTestimonial].stars)].map((_, i) => (
+                            <Star key={i} className="fill-yellow-500 text-yellow-500" size={20} />
+                        ))}
+                    </div>
+                    <p className="text-xl md:text-2xl font-medium text-white italic mb-8 leading-relaxed">
+                        "{TESTIMONIALS[activeTestimonial].text}"
+                    </p>
+                    <div>
+                        <h5 className="font-black text-yellow-500 uppercase">{TESTIMONIALS[activeTestimonial].name}</h5>
+                        <span className="text-sm text-gray-500">{TESTIMONIALS[activeTestimonial].role}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Dots */}
+            <div className="flex justify-center gap-3 mt-10">
+                {TESTIMONIALS.map((_, i) => (
+                    <button
+                        key={i}
+                        onClick={() => setActiveTestimonial(i)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${activeTestimonial === i ? 'bg-yellow-500 w-8' : 'bg-zinc-700 hover:bg-zinc-600'}`}
+                        aria-label={`Ver depoimento ${i + 1}`}
+                    />
+                ))}
+            </div>
+        </div>
+      </section>
+
+      {/* --- LOCAL --- */}
+      <section id="localizacao" className="bg-zinc-950 border-t border-zinc-900">
+        <div className="grid md:grid-cols-2">
+          <div className="p-12 md:p-20 flex flex-col justify-center space-y-8 order-2 md:order-1">
+            <div>
+                 <h2 className="text-yellow-500 uppercase font-bold mb-2 tracking-wider">
+                    Venha treinar
+                </h2>
+                <h3 className="text-3xl md:text-4xl font-black uppercase text-white">Localização</h3>
+            </div>
+            
+            <div className="space-y-8">
+                <div className="flex gap-5 items-start">
+                  <div className="bg-zinc-900 p-4 rounded text-yellow-500 border border-zinc-800">
+                      <MapPin size={24} />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-white uppercase mb-1 text-lg">Endereço</h5>
+                    <p className="text-gray-400">
+                        Rua Capitólio, 467 – Santo André<br/>
+                        Belo Horizonte - MG
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-5 items-start">
+                  <div className="bg-zinc-900 p-4 rounded text-yellow-500 border border-zinc-800">
+                      <Clock size={24} />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-white uppercase mb-1 text-lg">Horários</h5>
+                    <p className="text-gray-400">
+                        <span className="text-yellow-500 font-bold">Seg - Sex:</span> 06h – 22h<br/>
+                        <span className="text-yellow-500 font-bold">Sábado:</span> 08h – 14h
+                    </p>
+                  </div>
+                </div>
+            </div>
+          </div>
+
+          <div className="h-[400px] md:h-auto bg-zinc-800 relative order-1 md:order-2">
+             <iframe 
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3751.3653696885374!2d-43.957597925828466!3d-19.908985537637845!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xa6970000000001%3A0x0!2zMTnCsDU0JzMyLjQiUyA0M8KwNTcnMTguMSJX!5e0!3m2!1spt-BR!2sbr!4v1650000000000!5m2!1spt-BR!2sbr" 
+                width="100%" 
+                height="100%" 
+                style={{border:0, filter: 'grayscale(1) contrast(1.2) invert(0.92)'}} 
+                allowFullScreen="" 
+                loading="lazy" 
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Mapa DK Fit"
+                className="absolute inset-0"
+             ></iframe>
+          </div>
+        </div>
+      </section>
+
+      {/* --- FOOTER --- */}
+      <footer className="bg-black py-16 text-center text-gray-500 text-sm border-t border-zinc-900">
+        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-8 text-center md:text-left">
+            <div>
+                <div className="text-2xl font-black text-white mb-4">DK<span className="text-yellow-500">FIT</span></div>
+                <p className="mb-4">Transformando vidas através do movimento desde 2023.</p>
+            </div>
+            <div>
+                <h4 className="font-bold text-white uppercase mb-4">Links Rápidos</h4>
+                <div className="flex flex-col gap-2">
+                    <button onClick={() => scrollToSection('sobre')} className="hover:text-yellow-500 transition-colors text-left">Sobre Nós</button>
+                    <button onClick={() => scrollToSection('modalidades')} className="hover:text-yellow-500 transition-colors text-left">Modalidades</button>
+                    <button onClick={() => scrollToSection('localizacao')} className="hover:text-yellow-500 transition-colors text-left">Contato</button>
+                </div>
+            </div>
+            <div>
+                 <h4 className="font-bold text-white uppercase mb-4">Redes Sociais</h4>
+                 <div className="flex gap-4 justify-center md:justify-start">
+                     <a href="#" className="w-10 h-10 rounded bg-zinc-900 flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all"><Users size={20} /></a>
+                     <a href="#" className="w-10 h-10 rounded bg-zinc-900 flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all"><Quote size={20} /></a>
+                 </div>
+            </div>
+        </div>
+        <div className="mt-12 pt-8 border-t border-zinc-900">
+            <p>© {new Date().getFullYear()} DK FIT Academia. Todos os direitos reservados.</p>
+        </div>
+      </footer>
+
+      {/* --- WHATSAPP FLOAT --- */}
+      <a
+        href={whatsappLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 bg-[#25D366] text-white p-4 rounded-full shadow-[0_4px_20px_rgba(37,211,102,0.4)] hover:scale-110 hover:shadow-[0_4px_30px_rgba(37,211,102,0.6)] transition-all z-50 flex items-center justify-center group"
+        aria-label="Contato WhatsApp"
+      >
+        <Phone size={28} fill="currentColor" className="group-hover:animate-wiggle" />
+        <span className="absolute right-full mr-4 bg-white text-black text-xs font-bold px-3 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+            Agende agora!
+        </span>
+      </a>
+
+        {/* Global CSS for custom animations (inline for single-file requirement) */}
+        <style>{`
+            @keyframes wiggle {
+                0%, 100% { transform: rotate(-3deg); }
+                50% { transform: rotate(3deg); }
+            }
+            .animate-wiggle {
+                animation: wiggle 0.3s ease-in-out infinite;
+            }
+            .animate-pulse-slow {
+                animation: pulse-slow 10s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            @keyframes pulse-slow {
+                0%, 100% { transform: scale(1.05); }
+                50% { transform: scale(1.1); }
+            }
+        `}</style>
+    </div>
+  );
+};
+
+export default App;
